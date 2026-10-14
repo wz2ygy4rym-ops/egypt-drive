@@ -1,1 +1,124 @@
 
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Egypt Drive - سواق مصر</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#101820;color:white;font-family:Arial,sans-serif;text-align:center}
+header{padding:14px;background:#17252f}
+h1{margin:4px;color:#35d07f;font-size:25px}
+.stats{display:flex;justify-content:space-around;padding:12px;background:#22333f}
+.stat{font-size:14px}
+.stat b{display:block;color:#ffd166;font-size:20px;margin-top:5px}
+#game{position:relative;margin:auto;width:min(100%,420px);height:65vh;min-height:400px;max-height:600px;overflow:hidden;background:#424b51;border-left:7px solid #a9b1b5;border-right:7px solid #a9b1b5}
+#road{position:absolute;inset:0;background:repeating-linear-gradient(to bottom,#424b51 0 45px,#485258 45px 90px)}
+.lane{position:absolute;top:0;bottom:0;width:5px;background:repeating-linear-gradient(to bottom,#fff 0 35px,transparent 35px 70px);opacity:.8}
+.l1{left:33%}.l2{left:66%}
+.car{position:absolute;width:48px;height:78px;border-radius:12px 12px 8px 8px;border:3px solid #eee;box-shadow:0 3px 8px #111;z-index:3}
+.car:before{content:"";position:absolute;top:13px;left:7px;width:28px;height:20px;border-radius:5px;background:#a8e5f7;border:2px solid #233744}
+.car:after{content:"";position:absolute;bottom:8px;left:8px;width:26px;height:13px;border-radius:3px;background:#273844}
+#player{bottom:24px;left:calc(50% - 24px);background:#e5b82c}
+.enemy{background:#d74c42;top:-90px}
+#message{position:absolute;z-index:5;top:35%;left:5%;right:5%;background:#142630ed;border-radius:14px;padding:20px}
+#message h2{color:#35d07f}
+button{border:0;border-radius:10px;background:#35d07f;color:#092317;font-weight:bold;padding:13px 19px;font-size:16px;cursor:pointer}
+.controls{display:flex;justify-content:center;gap:24px;padding:15px}
+.controls button{width:85px;font-size:25px;background:#263d49;color:white}
+.note{font-size:12px;color:#b9c5cc;padding:0 10px 12px}
+</style>
+</head>
+<body>
+<header>
+<h1>🇪🇬 EGYPT DRIVE</h1>
+<div>سواق مصر | تجربة القيادة</div>
+</header>
+<div class="stats">
+<div class="stat">💵 الفلوس<b id="money">500</b></div>
+<div class="stat">🚕 المسافة<b id="distance">0 م</b></div>
+<div class="stat">🏁 السرعة<b id="speed">0</b></div>
+</div>
+<div id="game">
+<div id="road">
+<div class="lane l1"></div><div class="lane l2"></div>
+</div>
+<div id="player" class="car"></div>
+<div id="message">
+<h2>أهلاً بيك يا سواق!</h2>
+<p>سوق عربيتك واجمع الفلوس وتجنب العربيات التانية.</p>
+<p>استخدم الأسهم ← → أو الأزرار تحت.</p>
+<button id="start">ابدأ القيادة</button>
+</div>
+</div>
+<div class="controls">
+<button id="left" aria-label="يسار">⬅️</button>
+<button id="right" aria-label="يمين">➡️</button>
+</div>
+<div class="note">نسخة تجريبية تعمل في المتصفح. تجنب الاصطدام لتحافظ على فلوسك.</div>
+<script>
+const game=document.getElementById('game');
+const player=document.getElementById('player');
+const message=document.getElementById('message');
+const moneyEl=document.getElementById('money');
+const distanceEl=document.getElementById('distance');
+const speedEl=document.getElementById('speed');
+let x=0, money=500, distance=0, running=false, enemies=[], last=0, spawn=0;
+function reset(){
+ enemies.forEach(e=>e.el.remove()); enemies=[];
+ x=game.clientWidth/2-24;
+ player.style.left=x+'px';
+ distance=0; last=0; spawn=0;
+ distanceEl.textContent='0 م';
+ speedEl.textContent='0';
+}
+function start(){
+ reset(); running=true; message.style.display='none';
+ requestAnimationFrame(loop);
+}
+function move(d){
+ if(!running)return;
+ x=Math.max(8,Math.min(game.clientWidth-56,x+d));
+ player.style.left=x+'px';
+}
+document.getElementById('start').addEventListener('click',start);
+document.getElementById('left').addEventListener('pointerdown',()=>move(-38));
+document.getElementById('right').addEventListener('pointerdown',()=>move(38));
+document.addEventListener('keydown',e=>{
+ if(e.key==='ArrowLeft'||e.key==='a')move(-30);
+ if(e.key==='ArrowRight'||e.key==='d')move(30);
+ if(!running&&e.key==='Enter')start();
+});
+function spawnEnemy(){
+ const el=document.createElement('div');
+ el.className='car enemy';
+ const lanes=[.17,.5,.83];
+ const lane=lanes[Math.floor(Math.random()*lanes.length)];
+ el.style.left=(game.clientWidth*lane-24)+'px';
+ game.appendChild(el);
+ enemies.push({el,y:-90});
+}
+function loop(t){
+ if(!running)return;
+ const dt=Math.min((t-last)/16||1,2);last=t;
+ distance+=dt*.8;
+ distanceEl.textContent=Math.floor(distance)+' م';
+ speedEl.textContent='60';
+ spawn+=dt;
+ if(spawn>48){spawnEnemy();spawn=0}
+ enemies.forEach(e=>{
+  e.y+=4.2*dt;e.el.style.top=e.y+'px';
+  const a=player.getBoundingClientRect(),b=e.el.getBoundingClientRect();
+  if(a.left<b.right-8&&a.right>b.left+8&&a.top<b.bottom-8&&a.bottom>b.top+8){
+   running=false;message.style.display='block';
+   message.innerHTML='<h2>💥 حصل تصادم!</h2><p>المسافة: '+Math.floor(distance)+' متر</p><p>رصيدك: '+money+' جنيه تجريبي</p><button id="again">جرّب تاني</button>';
+   document.getElementById('again').onclick=start;
+  }
+ });
+ enemies=enemies.filter(e=>{if(e.y>game.clientHeight){e.el.remove();money+=10;moneyEl.textContent=money;return false}return true});
+ requestAnimationFrame(loop);
+}
+</script>
+</body>
+</html>
